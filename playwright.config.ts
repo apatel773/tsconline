@@ -1,5 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const browserNames = (process.env.PLAYWRIGHT_BROWSERS ?? (process.env.CI ? "chromium" : "chromium,firefox,webkit"))
+  .split(",")
+  .map((browserName) => browserName.trim())
+  .filter(Boolean);
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -18,6 +23,7 @@ export default defineConfig({
   },
   /* Maximum time each action can take. Defaults to 0 (no limit).*/
   testDir: "./app/__tests__/app/",
+  testMatch: process.env.PLAYWRIGHT_SMOKE_ONLY === "false" ? "**/*.test.ts" : "**/*.smoke.test.ts",
   /* Run tests in files in parallel */
   fullyParallel: true, // Set to false to avoid fully parallel execution
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -38,61 +44,36 @@ export default defineConfig({
   },
 
   /* Configure projects for major browsers */
-  projects: [
-    {
-      name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        viewport: { width: 1024, height: 768 },
-        deviceScaleFactor: 1,
-        isMobile: false,
-        hasTouch: false,
-        headless: true
-      }
-    },
-    {
-      name: "firefox",
-      use: {
-        ...devices["Desktop Firefox"],
-        viewport: { width: 1024, height: 768 },
-        deviceScaleFactor: 1,
-        isMobile: false,
-        hasTouch: false,
-        headless: true
-      }
-    },
-    {
-      name: "webkit",
-      use: {
-        ...devices["Desktop Safari"],
-        viewport: { width: 1024, height: 768 },
-        deviceScaleFactor: 1,
-        isMobile: false,
-        hasTouch: false,
-        headless: true
-      }
-    }
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
-  ],
+  projects: browserNames.map((browserName) => ({
+    name: browserName,
+    use:
+      browserName === "firefox"
+        ? {
+            ...devices["Desktop Firefox"],
+            viewport: { width: 1024, height: 768 },
+            deviceScaleFactor: 1,
+            isMobile: false,
+            hasTouch: false,
+            headless: true
+          }
+        : browserName === "webkit"
+          ? {
+              ...devices["Desktop Safari"],
+              viewport: { width: 1024, height: 768 },
+              deviceScaleFactor: 1,
+              isMobile: false,
+              hasTouch: false,
+              headless: true
+            }
+          : {
+              ...devices["Desktop Chrome"],
+              viewport: { width: 1024, height: 768 },
+              deviceScaleFactor: 1,
+              isMobile: false,
+              hasTouch: false,
+              headless: true
+            }
+  })),
 
   /* Run your local dev server before starting the tests */
   webServer: {
